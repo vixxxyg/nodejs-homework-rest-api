@@ -13,7 +13,6 @@ const listContacts = async () => {
 const getContactById = async (id) => {
   const contacts = await listContacts();
   const result = contacts.find((item) => item.id === id);
-  console.log("Founded such contact:");
   if (!result) {
     return null;
   }
@@ -21,16 +20,10 @@ const getContactById = async (id) => {
 };
 
 const addContact = async (name, email, phone) => {
-  if (!name || !email || !phone) {
-    console.log("Name, email and phone are required!");
-    return null;
-  }
-
   const data = { id: v4(), name, email, phone };
   const contacts = await listContacts();
   contacts.push(data);
   await fs.writeFile(contactsPath, JSON.stringify(contacts, null, 2));
-  console.log("Contact have been added");
   return data;
 };
 
