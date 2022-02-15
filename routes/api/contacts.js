@@ -30,9 +30,6 @@ router.get("/:id", async (req, res, next) => {
     }
     res.json(result);
   } catch (error) {
-    if (error.message.includes("Cast to ObjectId failed")) {
-      error.status = 404;
-    }
     next(error);
   }
 });
@@ -57,6 +54,7 @@ router.put("/:id", async (req, res, next) => {
       throw new createError(400, "missing fields");
     }
     const { id } = req.params;
+
     const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
     if (!result) {
       throw new createError(404, "Not found");
