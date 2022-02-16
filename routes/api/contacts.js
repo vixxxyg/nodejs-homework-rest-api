@@ -1,6 +1,6 @@
 const express = require("express");
 const createError = require("http-errors");
-const { Mongoose } = require("mongoose");
+const Mongoose = require("mongoose");
 
 const { Contact, schemas } = require("../../models/contact");
 
@@ -54,6 +54,9 @@ router.put("/:id", async (req, res, next) => {
       throw new createError(400, "missing fields");
     }
     const { id } = req.params;
+    if (!Mongoose.Types.ObjectId.isValid(id)) {
+      throw new createError(400, "invalid ID");
+    }
 
     const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
     if (!result) {
@@ -72,6 +75,9 @@ router.patch("/:id/favorite", async (req, res, next) => {
       throw new createError(400, "missing field favorite");
     }
     const { id } = req.params;
+    if (!Mongoose.Types.ObjectId.isValid(id)) {
+      throw new createError(400, "invalid ID");
+    }
     const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
     if (!result) {
       throw new createError(404, "Not found");
@@ -85,6 +91,10 @@ router.patch("/:id/favorite", async (req, res, next) => {
 router.delete("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
+    if (!Mongoose.Types.ObjectId.isValid(id)) {
+      throw new createError(400, "invalid ID");
+    }
+
     const result = await Contact.findByIdAndDelete(id);
     if (!result) {
       throw new createError(404, "Not found");
