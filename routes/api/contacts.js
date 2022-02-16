@@ -1,20 +1,14 @@
 const express = require("express");
 const createError = require("http-errors");
-const Joi = require("joi");
+const Mongoose = require("mongoose");
 
-const contacts = require("../../models/contacts");
-
-const contactSchema = Joi.object({
-  name: Joi.string().required(),
-  email: Joi.string().required(),
-  phone: Joi.string().required(),
-});
+const { Contact, schemas } = require("../../models/contact");
 
 const router = express.Router();
 
 router.get("/", async (req, res, next) => {
   try {
-    const result = await contacts.listContacts();
+    const result = await Contact.find();
     res.json(result);
   } catch (error) {
     next(error);
@@ -24,7 +18,13 @@ router.get("/", async (req, res, next) => {
 router.get("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await contacts.getContactById(id);
+
+    if (!Mongoose.Types.ObjectId.isValid(id)) {
+      throw new createError(400, "invalid ID");
+    }
+
+    const result = await Contact.findById(id);
+
     if (!result) {
       throw new createError(404, "Not found");
     }
@@ -36,12 +36,11 @@ router.get("/:id", async (req, res, next) => {
 
 router.post("/", async (req, res, next) => {
   try {
-    const { error } = contactSchema.validate(req.body);
+    const { error } = schemas.add.validate(req.body);
     if (error) {
       throw new createError(400, "missing required name field");
     }
-    const { name, email, phone } = req.body;
-    const result = await contacts.addContact(name, email, phone);
+    const result = await Contact.create(req.body);
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -50,13 +49,36 @@ router.post("/", async (req, res, next) => {
 
 router.put("/:id", async (req, res, next) => {
   try {
-    const { error } = contactSchema.validate(req.body);
+    const { error } = schemas.add.validate(req.body);
     if (error) {
       throw new createError(400, "missing fields");
     }
     const { id } = req.params;
-    const { name, email, phone } = req.body;
-    const result = await contacts.updateContact(id, name, email, phone);
+    if (!Mongoose.Types.ObjectId.isValid(id)) {
+      throw new createError(400, "invalid ID");
+    }
+
+    const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
+    if (!result) {
+      throw new createError(404, "Not found");
+    }
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/:id/favorite", async (req, res, next) => {
+  try {
+    const { error } = schemas.updateFavorite.validate(req.body);
+    if (error) {
+      throw new createError(400, "missing field favorite");
+    }
+    const { id } = req.params;
+    if (!Mongoose.Types.ObjectId.isValid(id)) {
+      throw new createError(400, "invalid ID");
+    }
+    const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
     if (!result) {
       throw new createError(404, "Not found");
     }
@@ -69,7 +91,11 @@ router.put("/:id", async (req, res, next) => {
 router.delete("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await contacts.removeContact(id);
+    if (!Mongoose.Types.ObjectId.isValid(id)) {
+      throw new createError(400, "invalid ID");
+    }
+
+    const result = await Contact.findByIdAndDelete(id);
     if (!result) {
       throw new createError(404, "Not found");
     }
