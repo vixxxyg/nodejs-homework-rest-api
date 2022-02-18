@@ -53,6 +53,9 @@ router.post("/", authenticate, async (req, res, next) => {
     const { _id } = req.user;
     const data = { ...req.body, owner: _id };
     const result = await Contact.create(data);
+    if (!result) {
+      throw new createError(404, "Not found");
+    }
     res.status(201).json(result);
   } catch (error) {
     next(error);
