@@ -3,19 +3,28 @@ const createError = require("http-errors");
 const Mongoose = require("mongoose");
 
 const { Contact, schemas } = require("../../models/contact");
-
+const { authenticate } = require("../../middlewares");
 const router = express.Router();
 
-router.get("/", async (req, res, next) => {
+router.get("/", authenticate, async (req, res, next) => {
   try {
-    const result = await Contact.find();
+    const { page = 1, limit = 5 } = req.query;
+    if (isNaN(page) || isNaN(limit)) {
+      throw new CreateError(400, "Page or limit is not a number");
+    }
+    const skip = (page - 1) * limit;
+    const { _id } = req.user;
+    const result = await Contact.find({ owner: _id }, "-createdAt -updatedAt", {
+      skip,
+      limit: Number(limit),
+    }).populate("owner", "email");
     res.json(result);
   } catch (error) {
     next(error);
   }
 });
 
-router.get("/:id", async (req, res, next) => {
+router.get("/:id", authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
 
@@ -23,7 +32,8 @@ router.get("/:id", async (req, res, next) => {
       throw new createError(400, "invalid ID");
     }
 
-    const result = await Contact.findById(id);
+    const { _id } = req.user;
+    const result = await Contact.findById({ owner: _id, _id: id });
 
     if (!result) {
       throw new createError(404, "Not found");
@@ -34,20 +44,22 @@ router.get("/:id", async (req, res, next) => {
   }
 });
 
-router.post("/", async (req, res, next) => {
+router.post("/", authenticate, async (req, res, next) => {
   try {
     const { error } = schemas.add.validate(req.body);
     if (error) {
       throw new createError(400, "missing required name field");
     }
-    const result = await Contact.create(req.body);
+    const data = { ...req.body, owner: req.user._id };
+    console.log(data);
+    const result = await Contact.create(data);
     res.status(201).json(result);
   } catch (error) {
     next(error);
   }
 });
 
-router.put("/:id", async (req, res, next) => {
+router.put("/:id", authenticate, async (req, res, next) => {
   try {
     const { error } = schemas.add.validate(req.body);
     if (error) {
@@ -58,7 +70,9 @@ router.put("/:id", async (req, res, next) => {
       throw new createError(400, "invalid ID");
     }
 
-    const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
+    const { _id } = req.user;
+    const data = { ...req.body, owner: _id };
+    const result = await Contact.findByIdAndUpdate(id, data, { new: true });
     if (!result) {
       throw new createError(404, "Not found");
     }
@@ -68,7 +82,7 @@ router.put("/:id", async (req, res, next) => {
   }
 });
 
-router.patch("/:id/favorite", async (req, res, next) => {
+router.patch("/:id/favorite", authenticate, async (req, res, next) => {
   try {
     const { error } = schemas.updateFavorite.validate(req.body);
     if (error) {
@@ -78,7 +92,9 @@ router.patch("/:id/favorite", async (req, res, next) => {
     if (!Mongoose.Types.ObjectId.isValid(id)) {
       throw new createError(400, "invalid ID");
     }
-    const result = await Contact.findByIdAndUpdate(id, req.body, { new: true });
+    const { _id } = req.user;
+    const data = { ...req.body, owner: _id };
+    const result = await Contact.findByIdAndUpdate(id, data, { new: true });
     if (!result) {
       throw new createError(404, "Not found");
     }
@@ -88,14 +104,15 @@ router.patch("/:id/favorite", async (req, res, next) => {
   }
 });
 
-router.delete("/:id", async (req, res, next) => {
+router.delete("/:id", authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!Mongoose.Types.ObjectId.isValid(id)) {
       throw new createError(400, "invalid ID");
     }
 
-    const result = await Contact.findByIdAndDelete(id);
+    const { _id } = req.user;
+    const result = await Contact.findByIdAndDelete({ owner: _id, _id: id });
     if (!result) {
       throw new createError(404, "Not found");
     }
