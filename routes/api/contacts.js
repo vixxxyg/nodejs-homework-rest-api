@@ -50,8 +50,8 @@ router.post("/", authenticate, async (req, res, next) => {
     if (error) {
       throw new createError(400, "missing required name field");
     }
-    const data = { ...req.body, owner: req.user._id };
-    console.log(data);
+    const { _id } = req.user;
+    const data = { ...req.body, owner: _id };
     const result = await Contact.create(data);
     res.status(201).json(result);
   } catch (error) {
