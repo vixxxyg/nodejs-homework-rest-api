@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.get("/", authenticate, async (req, res, next) => {
   try {
-    const { page = 1, limit = 5 } = req.query;
+    const { page = 1, limit = 10 } = req.query;
     if (isNaN(page) || isNaN(limit)) {
       throw new CreateError(400, "Page or limit is not a number");
     }
@@ -27,14 +27,11 @@ router.get("/", authenticate, async (req, res, next) => {
 router.get("/:id", authenticate, async (req, res, next) => {
   try {
     const { id } = req.params;
-
+    const { _id } = req.user;
     if (!Mongoose.Types.ObjectId.isValid(id)) {
       throw new createError(400, "invalid ID");
     }
-
-    const { _id } = req.user;
-    const result = await Contact.findById({ owner: _id, _id: id });
-
+    const result = await Contact.find({ owner: _id, _id: id });
     if (!result) {
       throw new createError(404, "Not found");
     }
@@ -53,9 +50,6 @@ router.post("/", authenticate, async (req, res, next) => {
     const { _id } = req.user;
     const data = { ...req.body, owner: _id };
     const result = await Contact.create(data);
-    if (!result) {
-      throw new createError(404, "Not found");
-    }
     res.status(201).json(result);
   } catch (error) {
     next(error);
@@ -74,8 +68,11 @@ router.put("/:id", authenticate, async (req, res, next) => {
     }
 
     const { _id } = req.user;
-    const data = { ...req.body, owner: _id };
-    const result = await Contact.findByIdAndUpdate(id, data, { new: true });
+    const result = await Contact.findOneAndUpdate(
+      { owner: _id, _id: id },
+      req.body,
+      { new: true }
+    );
     if (!result) {
       throw new createError(404, "Not found");
     }
@@ -96,8 +93,12 @@ router.patch("/:id/favorite", authenticate, async (req, res, next) => {
       throw new createError(400, "invalid ID");
     }
     const { _id } = req.user;
-    const data = { ...req.body, owner: _id };
-    const result = await Contact.findByIdAndUpdate(id, data, { new: true });
+
+    const result = await Contact.findOneAndUpdate(
+      { owner: _id, _id: id },
+      req.body,
+      { new: true }
+    );
     if (!result) {
       throw new createError(404, "Not found");
     }
